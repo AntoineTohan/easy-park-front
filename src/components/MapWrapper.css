@@ -1,0 +1,20 @@
+#map {
+  height: 500px;
+}
+
+#listing {
+  overflow: auto;
+  cursor: pointer;
+  position: absolute;
+  overflow-y: scroll;
+  max-height: 100%;
+}
+
+#resultsTable {
+  border-collapse: collapse;
+  width: 140px;
+}
+
+.marker {
+  height: 40px;
+}

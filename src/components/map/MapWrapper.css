@@ -1,0 +1,31 @@
+@media only screen and (min-width: 576px) {
+  .resp-pl-0 {
+    padding-right: 0px !important;
+  }
+}
+
+td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+#map {
+  overflow: hidden;
+  padding-bottom: 56.25%;
+  position: relative;
+  height: 0;
+}
+
+.map-responsive iframe {
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+}
+
+.infoText {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

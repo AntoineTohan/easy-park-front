@@ -1,0 +1,7 @@
+.listing {
+    overflow: auto;
+    cursor: pointer;
+    position: absolute;
+    overflow-y: scroll;
+    max-height: 100%;
+  }

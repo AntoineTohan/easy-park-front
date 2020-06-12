@@ -45,7 +45,7 @@ export default class AutoCompleteInput extends React.PureComponent<
     return (
       <div className="container-fluid">
         <div className="form-group">
-          <label>Trouver les parkings de votre ville :</label>
+          <label>Destination :</label>
           <input
             className="form-control mb-3"
             id="inputAutoComplete"

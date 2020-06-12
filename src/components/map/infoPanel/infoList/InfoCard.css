@@ -12,3 +12,9 @@
 .darkblue {
   color: #1a73e8;
 }
+
+.link-style {
+  color: #007bff;
+  text-decoration: none;
+  background-color: transparent;
+}

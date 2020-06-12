@@ -1,6 +1,5 @@
 import React from "react";
-// import AutoCompleteInput from "./AutoCompleteInput";
-import InfoList from "./infoList/InfoList";
+import InfoPanel from "./infoPanel/InfoPanel";
 import "./MapWrapper.css";
 
 export interface IMapMarker {
@@ -10,12 +9,17 @@ export interface IMapMarker {
 
 interface IState {
   mapMarkers: IMapMarker[];
+  vicinityOrigin: string | undefined;
+  originMaker: google.maps.Marker | undefined;
+  destinationMaker: google.maps.Marker | undefined;
 }
 
 export default class MapWrapper extends React.PureComponent<{}, IState> {
   private googleMapRef = React.createRef<HTMLDivElement>();
-  private autoCompleteRef = React.createRef<HTMLInputElement>();
-  private autocomplete: google.maps.places.Autocomplete | null = null;
+  private autoCompleteDestinationRef = React.createRef<HTMLInputElement>();
+  private autoCompleteOriginRef = React.createRef<HTMLInputElement>();
+  private autocompleteDestination: google.maps.places.Autocomplete | null = null;
+  private autocompleteOrigin: google.maps.places.Autocomplete | null = null;
   private map: google.maps.Map<HTMLDivElement> | null = null;
   private places: google.maps.places.PlacesService | null = null;
   private infoWindow: google.maps.InfoWindow | null = null;
@@ -23,8 +27,12 @@ export default class MapWrapper extends React.PureComponent<{}, IState> {
     super({});
     this.state = {
       mapMarkers: [],
+      originMaker: undefined,
+      destinationMaker: undefined,
+      vicinityOrigin: undefined,
     };
     this.onPlaceChanged = this.onPlaceChanged.bind(this);
+    this.createMarkerOrigin = this.createMarkerOrigin.bind(this);
   }
 
   componentDidMount() {
@@ -54,16 +62,34 @@ export default class MapWrapper extends React.PureComponent<{}, IState> {
           content: "",
           maxWidth: 200,
         });
-        if (this.autoCompleteRef.current) {
-          this.autocomplete = new window.google.maps.places.Autocomplete(
-            this.autoCompleteRef.current,
+        if (
+          this.autoCompleteDestinationRef.current &&
+          this.autoCompleteOriginRef.current
+        ) {
+          this.autocompleteDestination = new window.google.maps.places.Autocomplete(
+            this.autoCompleteDestinationRef.current,
             {
-              types: ["(regions)"],
+              types: [],
               componentRestrictions: { country: "fr" },
             }
           );
+
+          this.autocompleteOrigin = new window.google.maps.places.Autocomplete(
+            this.autoCompleteOriginRef.current,
+            {
+              types: [],
+              componentRestrictions: { country: "fr" },
+            }
+          );
+          this.autocompleteDestination.addListener(
+            "place_changed",
+            this.onPlaceChanged
+          );
+          this.autocompleteOrigin.addListener(
+            "place_changed",
+            this.createMarkerOrigin
+          );
           this.places = new window.google.maps.places.PlacesService(this.map);
-          this.autocomplete.addListener("place_changed", this.onPlaceChanged);
         }
       }
     });
@@ -82,14 +108,98 @@ export default class MapWrapper extends React.PureComponent<{}, IState> {
     });
     this.setState({ mapMarkers: [] });
   }
-
+  private clearOriginMarker() {
+    if (this.state.originMaker) this.state.originMaker.setMap(null);
+    this.setState({ originMaker: undefined });
+  }
+  private clearDestinationMarker() {
+    if (this.state.destinationMaker) this.state.destinationMaker.setMap(null);
+    this.setState({ destinationMaker: undefined });
+  }
   private changeMarkerStyle(
     marker: google.maps.Marker,
     Zindex: number,
-    url: string
+    url?: string
   ) {
     marker.setZIndex(Zindex);
-    marker.setIcon(url);
+    if (url) {
+      marker.setIcon(url);
+    }
+  }
+
+  private createMarkerDestination() {
+    this.clearDestinationMarker();
+    const place = this.autocompleteDestination!.getPlace();
+    if (place) {
+      const destinationMarker = new window.google.maps.Marker({
+        position: place.geometry!.location,
+        animation: window.google.maps.Animation.DROP,
+        map: this.map ? this.map : undefined,
+        icon: "http://maps.gstatic.com/mapfiles/markers2/marker_greenD.png",
+      });
+      this.changeMarkerStyle(destinationMarker, 21);
+      window.google.maps.event.addListener(
+        destinationMarker,
+        "mouseover",
+        () => {
+          this.changeMarkerStyle(destinationMarker, 20);
+        }
+      );
+      window.google.maps.event.addListener(
+        destinationMarker,
+        "mouseout",
+        () => {
+          this.changeMarkerStyle(destinationMarker, 10);
+        }
+      );
+      this.setState({ destinationMaker: destinationMarker });
+    }
+  }
+
+  private createMarkerOrigin() {
+    this.clearOriginMarker();
+    if (this.autocompleteOrigin && this.map) {
+      const placeOrigin = this.autocompleteOrigin.getPlace();
+      if (placeOrigin && placeOrigin.geometry) {
+        this.map.panTo(placeOrigin.geometry.location);
+        this.map.setZoom(15);
+        const originMarker = new window.google.maps.Marker({
+          position: placeOrigin.geometry!.location,
+          animation: window.google.maps.Animation.DROP,
+          map: this.map ? this.map : undefined,
+          icon: "http://maps.gstatic.com/mapfiles/markers2/marker_greenO.png",
+        });
+        this.changeMarkerStyle(originMarker, 20);
+        window.google.maps.event.addListener(originMarker, "mouseover", () => {
+          this.changeMarkerStyle(originMarker, 20);
+        });
+        window.google.maps.event.addListener(originMarker, "mouseout", () => {
+          this.changeMarkerStyle(originMarker, 10);
+        });
+        this.setState({ vicinityOrigin: placeOrigin.formatted_address });
+        this.setState({ originMaker: originMarker });
+      }
+    }
+  }
+
+  private addParkingMarkerEvent(m: IMapMarker) {
+    window.google.maps.event.addListener(m.marker, "click", () =>
+      this.showInfoWindow(m)
+    );
+    window.google.maps.event.addListener(m.marker, "mouseover", () => {
+      this.changeMarkerStyle(
+        m.marker,
+        18,
+        "https://maps.gstatic.com/mapfiles/api-3/images/spotlight-poi.png"
+      );
+    });
+    window.google.maps.event.addListener(m.marker, "mouseout", () => {
+      this.changeMarkerStyle(
+        m.marker,
+        10,
+        "https://maps.gstatic.com/mapfiles/api-3/images/spotlight-poi-dotless.png"
+      );
+    });
   }
 
   private search() {
@@ -106,6 +216,7 @@ export default class MapWrapper extends React.PureComponent<{}, IState> {
           status: google.maps.places.PlacesServiceStatus
         ) => {
           if (status === window.google.maps.places.PlacesServiceStatus.OK) {
+            this.createMarkerDestination();
             const markers = this.filterByType(results);
             const mapMarkers = markers.map(
               (r: google.maps.places.PlaceResult, i: number) => {
@@ -121,31 +232,7 @@ export default class MapWrapper extends React.PureComponent<{}, IState> {
                 };
               }
             );
-
-            mapMarkers.map((m: IMapMarker) => {
-              window.google.maps.event.addListener(m.marker, "click", () =>
-                this.showInfoWindow(m)
-              );
-
-              window.google.maps.event.addListener(
-                m.marker,
-                "mouseover",
-                () => {
-                  this.changeMarkerStyle(
-                    m.marker,
-                    20,
-                    "https://maps.gstatic.com/mapfiles/api-3/images/spotlight-poi.png"
-                  );
-                }
-              );
-              window.google.maps.event.addListener(m.marker, "mouseout", () => {
-                this.changeMarkerStyle(
-                  m.marker,
-                  10,
-                  "https://maps.gstatic.com/mapfiles/api-3/images/spotlight-poi-dotless.png"
-                );
-              });
-            });
+            mapMarkers.map((m: IMapMarker) => this.addParkingMarkerEvent(m));
             this.setState({ mapMarkers: mapMarkers });
           }
         }
@@ -155,7 +242,6 @@ export default class MapWrapper extends React.PureComponent<{}, IState> {
 
   private showInfoWindow(mapMarker: IMapMarker) {
     if (this.places) {
-      console.log(this.places);
       this.places.getDetails(
         { placeId: mapMarker.result.place_id! },
         (place, status) => {
@@ -173,8 +259,8 @@ export default class MapWrapper extends React.PureComponent<{}, IState> {
   }
 
   private onPlaceChanged() {
-    if (this.autocomplete && this.map) {
-      const place = this.autocomplete.getPlace();
+    if (this.autocompleteDestination && this.map) {
+      const place = this.autocompleteDestination.getPlace();
       if (place) {
         if (place.geometry) {
           this.map.panTo(place.geometry.location);
@@ -187,15 +273,30 @@ export default class MapWrapper extends React.PureComponent<{}, IState> {
 
   render() {
     return (
-      <div className="container-fluid">
+      <div className="container-flui mb-5">
         <div className="form-group">
-          <label>Trouver les parkings de votre ville :</label>
+          <label>
+            <b>D'où partez-vous ?</b> :
+          </label>
           <input
-            className="form-control mb-3"
+            className="form-control mb-3 ml-3"
             id="inputAutoComplete"
             type="text"
-            placeholder="Montpellier, France"
-            ref={this.autoCompleteRef}
+            placeholder="Saint-Gély-du-Fesc, France"
+            ref={this.autoCompleteOriginRef}
+          />
+        </div>
+        <div className="form-group">
+          <label>
+            <b>Entrez votre destination</b> ( Easy'Park trouvera les parkings
+            les plus proches à votre place ) :
+          </label>
+          <input
+            className="form-control mb-3 ml-3"
+            id="inputAutoComplete"
+            type="text"
+            placeholder="20 Rue d'Alco, Montpellier, France"
+            ref={this.autoCompleteDestinationRef}
           />
         </div>
         {/* <AutoCompleteInput map={this.map} search={this.search}/> */}
@@ -209,9 +310,11 @@ export default class MapWrapper extends React.PureComponent<{}, IState> {
               ></div>
             </div>
             {this.infoWindow && (
-              <InfoList
+              <InfoPanel
                 markers={this.state.mapMarkers}
+                vicinityOrigin={this.state.vicinityOrigin!}
                 infoWindow={this.infoWindow}
+                map={this.map!}
               />
             )}
           </div>

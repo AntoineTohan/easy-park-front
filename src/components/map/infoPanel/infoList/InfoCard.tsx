@@ -81,7 +81,7 @@ export default class InfoCard extends React.PureComponent<
         );
         const origin = this.transformUrl(this.props.vicinityOrigin);
         const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
-        const text = `Voici un lien d'iténaire Google Maps afin de vous rendre à : <strong>${this.props.mapMarker.result.name}</strong>. <br> <br> <a href="${url}" target="_blank">Itinéraire Google</a>`;
+        const text = `Voici un lien d'itinéraire Google Maps afin de vous rendre à : <strong>${this.props.mapMarker.result.name}</strong>. <br> <br> <a href="${url}" target="_blank">Itinéraire Google</a>`;
         Swal.fire({
           title: "Votre itinéraire !",
           icon: "success",

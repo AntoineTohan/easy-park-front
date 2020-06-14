@@ -1,10 +1,21 @@
 import React from "react";
+import axios from "axios";
+import { correspondance } from "../../correspondanceParkings";
 import InfoPanel from "./infoPanel/InfoPanel";
 import "./MapWrapper.css";
 
 export interface IMapMarker {
   marker: google.maps.Marker;
   result: google.maps.places.PlaceResult;
+  parking: IParking[] | undefined;
+}
+
+export interface IParking {
+  id: string;
+  name: string;
+  open: boolean;
+  free: number;
+  total: number;
 }
 
 interface IState {
@@ -12,6 +23,7 @@ interface IState {
   vicinityOrigin: string | undefined;
   originMaker: google.maps.Marker | undefined;
   destinationMaker: google.maps.Marker | undefined;
+  parkings: IParking[];
 }
 
 export default class MapWrapper extends React.PureComponent<{}, IState> {
@@ -30,6 +42,7 @@ export default class MapWrapper extends React.PureComponent<{}, IState> {
       originMaker: undefined,
       destinationMaker: undefined,
       vicinityOrigin: undefined,
+      parkings: [],
     };
     this.onPlaceChanged = this.onPlaceChanged.bind(this);
     this.createMarkerOrigin = this.createMarkerOrigin.bind(this);
@@ -41,6 +54,11 @@ export default class MapWrapper extends React.PureComponent<{}, IState> {
     script.async = true;
     script.defer = true;
     window.document.body.appendChild(script);
+
+    axios.get("http://localhost:8080").then((res) => {
+      const parkings = res.data;
+      this.setState({ parkings });
+    });
 
     script.addEventListener("load", () => {
       if (this.googleMapRef.current) {
@@ -91,6 +109,14 @@ export default class MapWrapper extends React.PureComponent<{}, IState> {
           );
           this.places = new window.google.maps.places.PlacesService(this.map);
         }
+        setInterval(
+          () =>
+            axios.get("http://localhost:8080").then((res) => {
+              const parkings = res.data;
+              this.setState({ parkings });
+            }),
+          1000
+        );
       }
     });
   }
@@ -202,6 +228,22 @@ export default class MapWrapper extends React.PureComponent<{}, IState> {
     });
   }
 
+  private getCorrespondanceParking(r: google.maps.places.PlaceResult) {
+    const result = correspondance.parkings.filter((p) => {
+      if (p.googleName === r.name) {
+        return p;
+      }
+    });
+    if (result.length > 0) {
+      const parkingObject = this.state.parkings.filter((p) => {
+        if (p.name === result[0].name) {
+          return p;
+        }
+      });
+      return parkingObject;
+    }
+  }
+
   private search() {
     if (this.map && this.places) {
       this.clearMapMarkers();
@@ -229,6 +271,7 @@ export default class MapWrapper extends React.PureComponent<{}, IState> {
                       "https://maps.gstatic.com/mapfiles/api-3/images/spotlight-poi-dotless.png",
                   }),
                   result: r,
+                  parking: this.getCorrespondanceParking(r),
                 };
               }
             );

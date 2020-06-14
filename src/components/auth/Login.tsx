@@ -8,7 +8,7 @@ export default class Login extends React.PureComponent<{}, {}> {
     return (
       <form className="form-signin">
         <img className="mb-4" src={logo} alt="" width="72" height="72" />
-        <h1 className="h3 mb-3 font-weight-normal">Connection</h1>
+        <h1 className="h3 mb-3 font-weight-normal">Connexion</h1>
         <label className="sr-only">Adresse email</label>
         <input
           type="email"

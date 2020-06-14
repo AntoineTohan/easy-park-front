@@ -12,11 +12,21 @@ interface IPropsInfoList {
   vicinityOrigin: string;
 }
 
-export default class InfoList extends React.PureComponent<IPropsInfoList, {}> {
+interface IState {
+  vicinityDestination: string;
+}
+
+export default class InfoList extends React.PureComponent<
+  IPropsInfoList,
+  IState
+> {
   private directionsRenderer: google.maps.DirectionsRenderer = new window.google.maps.DirectionsRenderer();
   private directionsService: google.maps.DirectionsService = new window.google.maps.DirectionsService();
   constructor(props: IPropsInfoList) {
     super(props);
+    this.state = {
+      vicinityDestination: "",
+    };
     this.calculateAndDisplayRoute = this.calculateAndDisplayRoute.bind(this);
   }
 
@@ -27,7 +37,7 @@ export default class InfoList extends React.PureComponent<IPropsInfoList, {}> {
   private calculateAndDisplayRoute(vicinity: string | undefined) {
     this.directionsService.route(
       {
-        origin: { query: this.props.vicinityOrigin},
+        origin: { query: this.props.vicinityOrigin },
         destination: { query: vicinity },
         travelMode: window.google.maps.TravelMode.DRIVING,
       },
@@ -42,6 +52,7 @@ export default class InfoList extends React.PureComponent<IPropsInfoList, {}> {
         }
       }
     );
+    this.setState({ vicinityDestination: vicinity! });
   }
   render() {
     return (
@@ -54,7 +65,11 @@ export default class InfoList extends React.PureComponent<IPropsInfoList, {}> {
                 mapMarker={m}
                 infoWindow={this.props.infoWindow}
                 calculateAndDisplayRoute={this.calculateAndDisplayRoute}
-                handleClickSetCurrentMarker={this.props.handleClickSetCurrentMarker}
+                handleClickSetCurrentMarker={
+                  this.props.handleClickSetCurrentMarker
+                }
+                vicinityDestination={this.state.vicinityDestination}
+                vicinityOrigin={this.props.vicinityOrigin}
                 key={i}
               ></InfoCard>
             );
